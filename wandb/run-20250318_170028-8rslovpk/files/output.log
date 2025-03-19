@@ -1,0 +1,45 @@
+  0%|                                                  | 0/3564 [00:00<?, ?it/s]Passing a tuple of `past_key_values` is deprecated and will be removed in Transformers v4.48.0. You should pass an instance of `EncoderDecoderCache` instead, e.g. `past_key_values=EncoderDecoderCache.from_legacy_cache(past_key_values)`.
+  0%|                                       | 2/3564 [00:32<16:21:39, 16.54s/it]Traceback (most recent call last):
+  File "/usr/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/digitalmesh/projects/Jithin/py/model/chatbot/transformers-model/src/train.py", line 81, in <module>
+    trainer.train()
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/transformers/trainer.py", line 2241, in train
+    return inner_training_loop(
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/transformers/trainer.py", line 2548, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/transformers/trainer.py", line 3740, in training_step
+    self.accelerator.backward(loss, **kwargs)
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/accelerate/accelerator.py", line 2359, in backward
+    loss.backward(**kwargs)
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/torch/_tensor.py", line 626, in backward
+    torch.autograd.backward(
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/torch/autograd/__init__.py", line 347, in backward
+    _engine_run_backward(
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/torch/autograd/graph.py", line 823, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/digitalmesh/projects/Jithin/py/model/chatbot/transformers-model/src/train.py", line 81, in <module>
+    trainer.train()
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/transformers/trainer.py", line 2241, in train
+    return inner_training_loop(
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/transformers/trainer.py", line 2548, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/transformers/trainer.py", line 3740, in training_step
+    self.accelerator.backward(loss, **kwargs)
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/accelerate/accelerator.py", line 2359, in backward
+    loss.backward(**kwargs)
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/torch/_tensor.py", line 626, in backward
+    torch.autograd.backward(
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/torch/autograd/__init__.py", line 347, in backward
+    _engine_run_backward(
+  File "/home/digitalmesh/.local/lib/python3.10/site-packages/torch/autograd/graph.py", line 823, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+KeyboardInterrupt

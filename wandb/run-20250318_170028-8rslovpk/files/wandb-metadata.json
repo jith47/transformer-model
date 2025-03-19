@@ -1,0 +1,25 @@
+{
+  "os": "Linux-6.8.0-52-generic-x86_64-with-glibc2.35",
+  "python": "CPython 3.10.12",
+  "startedAt": "2025-03-18T11:30:28.756643Z",
+  "program": "-m src.train",
+  "email": "greedman31@gmail.com",
+  "root": "/home/digitalmesh/projects/Jithin/py/model/chatbot/transformers-model",
+  "host": "SEZ-LWS-114",
+  "executable": "/usr/bin/python3",
+  "cpu_count": 4,
+  "cpu_count_logical": 8,
+  "disk": {
+    "/": {
+      "total": "502392610816",
+      "used": "119240085504"
+    }
+  },
+  "memory": {
+    "total": "33526026240"
+  },
+  "cpu": {
+    "count": 4,
+    "countLogical": 8
+  }
+}

@@ -1,0 +1,15 @@
+{"time":"2025-03-18T17:00:28.761135905+05:30","level":"INFO","msg":"stream: starting","core version":"0.19.8","symlink path":"/home/digitalmesh/projects/Jithin/py/model/chatbot/transformers-model/wandb/run-20250318_170028-8rslovpk/logs/debug-core.log"}
+{"time":"2025-03-18T17:00:28.872695107+05:30","level":"INFO","msg":"created new stream","id":"8rslovpk"}
+{"time":"2025-03-18T17:00:28.872779722+05:30","level":"INFO","msg":"stream: started","id":"8rslovpk"}
+{"time":"2025-03-18T17:00:28.872869278+05:30","level":"INFO","msg":"writer: Do: started","stream_id":"8rslovpk"}
+{"time":"2025-03-18T17:00:28.872900718+05:30","level":"INFO","msg":"handler: started","stream_id":"8rslovpk"}
+{"time":"2025-03-18T17:00:28.873025711+05:30","level":"INFO","msg":"sender: started","stream_id":"8rslovpk"}
+{"time":"2025-03-18T17:00:30.253313091+05:30","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-03-18T17:01:20.467414595+05:30","level":"INFO","msg":"stream: closing","id":"8rslovpk"}
+{"time":"2025-03-18T17:01:20.467953973+05:30","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-03-18T17:01:20.470914898+05:30","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-03-18T17:01:21.900062962+05:30","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-03-18T17:01:24.686566058+05:30","level":"INFO","msg":"handler: closed","stream_id":"8rslovpk"}
+{"time":"2025-03-18T17:01:24.686632707+05:30","level":"INFO","msg":"writer: Close: closed","stream_id":"8rslovpk"}
+{"time":"2025-03-18T17:01:24.686670383+05:30","level":"INFO","msg":"sender: closed","stream_id":"8rslovpk"}
+{"time":"2025-03-18T17:01:24.686834765+05:30","level":"INFO","msg":"stream: closed","id":"8rslovpk"}
