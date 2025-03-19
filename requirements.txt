@@ -21,3 +21,5 @@ uvicorn==0.27.0                # ASGI server
 
 # Edge deployment
 tensorflow-model-optimization==0.7.5  # Model pruning/quantization
+evaluate
+datasets
