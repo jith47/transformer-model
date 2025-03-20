@@ -2,7 +2,7 @@
 tensorflow==2.15.0              # Stable TF version with Keras integration
 tensorflow-text==2.15.0        # Text processing (matches TF version)
 tensorflow-datasets==4.9.4     # Compatible with TF 2.15
-numpy==1.24.3                  # Avoid TF 2.15+ compatibility issues
+numpy==1.26                # Avoid TF 2.15+ compatibility issues
 
 # Text preprocessing
 nlpaug==1.1.3                  # Compatible with TF 2.x
