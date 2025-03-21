@@ -6,6 +6,7 @@ from transformers import (
     Seq2SeqTrainer,
 )
 from evaluate import load
+import torch
 
 bleu = load("bleu")
 rouge = load("rouge")
