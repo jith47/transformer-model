@@ -31,30 +31,44 @@ def compute_metrics(eval_pred):
         "bleu": bleu_result["bleu"],
         "rougeL": rouge_result["rougeL"],
     }
+
 # Load model and tokenizer
-model = AutoModelForSeq2SeqLM.from_pretrained("t5-small")
-tokenizer = AutoTokenizer.from_pretrained("t5-small")
+model_name = "t5-small"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
+# Add special tokens safely
+new_tokens = ["User:", "Bot:"]
+tokenizer.add_special_tokens({"additional_special_tokens": new_tokens})
+model.resize_token_embeddings(len(tokenizer))
 
 # Tokenize dataset
 def tokenize_dataset(examples):
     contexts = []
     targets = []
     
-    for history, response in zip(examples["history"], examples["response"]):
-        # Format context with user messages and bot responses
-        context_str = " ".join([f"User: {msg}" if i % 2 == 0 else f"Bot: {msg}" 
-                               for i, msg in enumerate(history)])
-        contexts.append(context_str)
-        targets.append(f"Bot: {response}")
+    for personality, history, candidates in zip(examples["personality"], 
+                                              examples["history"],
+                                              examples["candidates"]):
+        # Combine personality with conversation history
+        persona_str = " ".join(personality)
+        context = f"Persona: {persona_str}\nHistory: {' '.join(history)}"
+        
+        # Use first candidate as the target response (ground truth)
+        target = candidates[0]  # First candidate is the correct response
+        
+        contexts.append(f"User: {context}")
+        targets.append(f"Bot: {target}")
 
-    # Tokenize contexts (inputs) and targets (labels)
+    # Tokenization
     tokenized_inputs = tokenizer(
         contexts,
-        max_length=256,  # Increased context length
+        max_length=256,
         truncation=True,
         padding="max_length",
         return_tensors="pt",
     )
+    
     tokenized_targets = tokenizer(
         targets,
         max_length=128,
@@ -63,15 +77,29 @@ def tokenize_dataset(examples):
         return_tensors="pt",
     )
 
+    # In your tokenization function
+    print(f"Input IDs type: {tokenized_inputs['input_ids'].dtype}")
+    print(f"Labels type: {tokenized_targets['input_ids'].dtype}")
+
     return {
-        "input_ids": tokenized_inputs["input_ids"],
-        "attention_mask": tokenized_inputs["attention_mask"],
-        "labels": tokenized_targets["input_ids"],
+        "input_ids": tokenized_inputs["input_ids"].to(torch.int64),
+        "attention_mask": tokenized_inputs["attention_mask"].to(torch.int64),
+        "labels": tokenized_targets["input_ids"].to(torch.int64),
     }
 
 # Load dataset
-dataset = load_dataset("bavard/personachat_truecased", streaming=True)  # For huge datasets
+dataset = load_dataset("bavard/personachat_truecased", streaming=True)
 
+# Tokenize with proper column removal
+tokenized_dataset = dataset.map(
+    lambda x: {
+        "input_ids": x["input_ids"],
+        "attention_mask": x["attention_mask"],
+        "labels": x["labels"]
+    },
+    batched=True,
+    remove_columns=dataset["train"].column_names
+)
 # Process in smaller batches
 tokenized_dataset = dataset.map(
     tokenize_dataset,

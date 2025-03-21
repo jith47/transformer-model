@@ -25,3 +25,4 @@ evaluate
 datasets
 nltk
 rouge_score
+torch
