@@ -7,6 +7,23 @@ from transformers import (
 )
 from evaluate import load
 import torch
+from transformers import TrainerCallback
+from torch.utils.data import DataLoader
+
+def safe_collate_fn(batch):
+    for item in batch:
+        assert item["input_ids"].max() < tokenizer.vocab_size, "Input ID overflow"
+        assert item["labels"].max() < tokenizer.vocab_size, "Label ID overflow"
+    return tokenizer.pad(batch, return_tensors="pt")
+
+class OverflowDebugCallback(TrainerCallback):
+    def on_step_end(self, args, state, control, **kwargs):
+        if state.global_step == 999:  # Check before the failing step
+            torch.save({
+                "model": kwargs["model"].state_dict(),
+                "optimizer": kwargs["optimizer"].state_dict(),
+                "inputs": kwargs["inputs"],
+            }, "debug_checkpoint_1000.pt")
 
 bleu = load("bleu")
 rouge = load("rouge")
@@ -82,6 +99,10 @@ def tokenize_dataset(examples):
     print(f"Input IDs type: {tokenized_inputs['input_ids'].dtype}")
     print(f"Labels type: {tokenized_targets['input_ids'].dtype}")
 
+    # Log extremes
+    print(f"Max Input ID: {tokenized_inputs['input_ids'].max().item()}")
+    print(f"Max Label ID: {tokenized_targets['input_ids'].max().item()}")
+
     return {
         "input_ids": tokenized_inputs["input_ids"].to(torch.int64),
         "attention_mask": tokenized_inputs["attention_mask"].to(torch.int64),
@@ -119,6 +140,10 @@ training_args = Seq2SeqTrainingArguments(
     warmup_steps=1000,
     weight_decay=0.01,
     fp16=True,
+    fp16_full_eval=False,
+    gradient_clip_val=1.0,  # Add gradient clipping
+    gradient_clip_mode="norm",  # Use norm-based clipping
+    dynamic_loss_scale=True,  # Auto-adjust loss scaling
     logging_steps=500,
     save_strategy="steps",  # Save every X steps
     save_steps=1000,  # Save checkpoint every 1000 steps
@@ -126,6 +151,7 @@ training_args = Seq2SeqTrainingArguments(
     eval_steps=1000,  # Evaluate every 1000 steps
     predict_with_generate=True,
     generation_max_length=128,
+    data_collator=safe_collate_fn,
 )
 
 # Trainer
@@ -137,6 +163,7 @@ trainer = Seq2SeqTrainer(
     tokenizer=tokenizer,
     compute_metrics=compute_metrics,
 )
+trainer.add_callback(OverflowDebugCallback())
 
 trainer.train()
 model.save_pretrained("transformer-modelmodels/trained/t5_chatbot")
