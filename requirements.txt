@@ -26,3 +26,5 @@ datasets
 nltk
 rouge_score
 torch
+peft
+bitsandbytes
