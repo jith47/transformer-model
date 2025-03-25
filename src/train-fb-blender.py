@@ -4,12 +4,12 @@ from transformers import (
     BlenderbotTokenizer,
     BlenderbotForConditionalGeneration,
     TrainingArguments,
-    Trainer
+    Trainer,
+    DataCollatorForSeq2Seq
 )
 from peft import LoraConfig, get_peft_model
 import torch
 from evaluate import load
-import bitsandbytes as bnb
 
 # 1. Initialize Model & Tokenizer ==============================================
 model_name = "facebook/blenderbot-400M-distill"
@@ -18,111 +18,108 @@ model = BlenderbotForConditionalGeneration.from_pretrained(model_name)
 
 # 2. Configure LoRA Adapters ==================================================
 lora_config = LoraConfig(
-    r=16,
+    r=8,
     lora_alpha=32,
-    target_modules=["q_proj", "v_proj"],
+    target_modules=["q_proj", "v_proj", "k_proj"],  # Added k_proj
     lora_dropout=0.05,
     bias="none",
-    task_type="CAUSAL_LM"
+    task_type="SEQ_2_SEQ_LM",
+    modules_to_save=["embed_tokens", "embed_positions"]  # Critical fix
 )
 model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
 
-# 3. Load & Prepare Dataset ===================================================
+# 3. Dataset Preparation ======================================================
 def format_chat_samples(examples):
-    formatted = []
+    inputs = []
+    targets = []
     for persona, history in zip(examples["personality"], examples["history"]):
-        # Build conversation with special tokens
-        dialog = []
-        for i, utt in enumerate(history):
-            speaker = "<USER>" if i % 2 == 0 else "<BOT>"
-            dialog.append(f"{speaker} {utt.strip()}")
-        
-        # Combine persona and dialog
-        formatted_text = (
-            f"Persona: {'; '.join(persona)}"
-            f"Conversation:{dialog}<BOT>"
-        )
-        formatted.append(formatted_text)
+        # Ensure valid conversation pairs
+        if len(history) < 2:
+            continue
+            
+        # Format with explicit speaker tags
+        context = "\n".join([
+            f"<USER> {utt.strip()}" if i%2 == 0 else f"<BOT> {utt.strip()}"
+            for i, utt in enumerate(history[:-1])
+        ])
+        inputs.append(f"Persona: {'; '.join(persona)}\n{context}")
+        targets.append(history[-1].strip())
     
-    return {"text": formatted}
+    return {"input": inputs, "target": targets}
 
 def tokenize_dataset(examples):
-    tokenized = tokenizer(
-        examples["text"],
-        max_length=512,
+    tokenized_inputs = tokenizer(
+        examples["input"],
+        max_length=256,
         truncation=True,
         padding="max_length",
         return_tensors="pt"
     )
-    return {
-        "input_ids": tokenized["input_ids"],
-        "attention_mask": tokenized["attention_mask"],
-        "labels": tokenized["input_ids"].clone()
-    }
-
-dataset = load_dataset("bavard/personachat_truecased")
-dataset = dataset.map(format_chat_samples, batched=True)
-tokenized_dataset = dataset.map(tokenize_dataset, batched=True)
-
-# 4. Training Setup ===========================================================
-training_args = TrainingArguments(
-    output_dir="./chatbot_model",
-    num_train_epochs=3,
-    per_device_train_batch_size=8,
-    gradient_accumulation_steps=2,
-    learning_rate=2e-4,
-    fp16=True,
-    optim="paged_adamw_8bit",
-    logging_steps=100,
-    save_steps=500,
-    evaluation_strategy="steps",
-    eval_steps=500,
-    report_to="none",
-    remove_unused_columns=False
-)
-
-# 5. Metrics & Evaluation =====================================================
-bleu = load("bleu")
-rouge = load("rouge")
-
-def compute_metrics(eval_pred):
-    preds, labels = eval_pred
-    decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
-    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+    tokenized_targets = tokenizer(
+        examples["target"],
+        max_length=128,
+        truncation=True,
+        padding="max_length",
+        return_tensors="pt"
+    )
+    
+    # Explicit index validation
+    max_valid_id = tokenizer.vocab_size + len(tokenizer.added_tokens_encoder) - 1
+    assert tokenized_inputs["input_ids"].max() <= max_valid_id, "Input ID overflow"
+    assert tokenized_targets["input_ids"].max() <= max_valid_id, "Label ID overflow"
     
     return {
-        "bleu": bleu.compute(predictions=decoded_preds, references=[[r] for r in decoded_labels])["bleu"],
-        "rougeL": rouge.compute(predictions=decoded_preds, references=decoded_labels)["rougeL"]
+        "input_ids": tokenized_inputs["input_ids"],
+        "attention_mask": tokenized_inputs["attention_mask"],
+        "labels": tokenized_targets["input_ids"]
     }
 
-# 6. Initialize Trainer ========================================================
+# 4. Load Dataset with Remote Code Trust ======================================
+dataset = load_dataset(
+    "bavard/personachat_truecased",
+    trust_remote_code=True  # Required for this dataset
+)
+
+# Process dataset
+dataset = dataset.map(format_chat_samples, batched=True, remove_columns=dataset["train"].column_names)
+dataset = dataset.filter(lambda x: len(x["input"]) > 0)  # Remove empty samples
+tokenized_dataset = dataset.map(tokenize_dataset, batched=True, remove_columns=["input", "target"])
+
+# 5. Training Setup ===========================================================
+data_collator = DataCollatorForSeq2Seq(
+    tokenizer,
+    model=model,
+    pad_to_multiple_of=8
+)
+
+training_args = TrainingArguments(
+    output_dir="./chatbot_model",
+    num_train_epochs=2,  # Reduced for testing
+    per_device_train_batch_size=2,
+    gradient_accumulation_steps=8,
+    learning_rate=1e-4,
+    fp16=False,  # Disable FP16 for stability
+    optim="adamw_torch",
+    logging_steps=10,
+    save_steps=500,
+    eval_steps=500,
+    report_to="none",
+    remove_unused_columns=True,
+    label_names=["labels"]
+)
+
+# 6. Trainer Configuration ===================================================
 trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=tokenized_dataset["train"],
     eval_dataset=tokenized_dataset["validation"],
+    data_collator=data_collator,
     compute_metrics=compute_metrics
 )
 
-# 7. Start Training ============================================================
+# 8. Start Training ==========================================================
 print("Starting training...")
 trainer.train()
-model.save_pretrained("trained/t5_chatbot")
-
-# 8. Inference Function ========================================================
-def chat(prompt, persona="helpful assistant", max_length=200):
-    formatted_prompt = f"Persona: {persona}\n<USER> {prompt}\n<BOT>"
-    inputs = tokenizer(formatted_prompt, return_tensors="pt")
-    outputs = model.generate(
-        **inputs,
-        max_length=max_length,
-        do_sample=True,
-        top_k=50,
-        top_p=0.95,
-        temperature=0.9
-    )
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-# Example usage
-print(chat("What's your opinion on AI ethics?"))
+model.save_pretrained("./trained_chatbot")
